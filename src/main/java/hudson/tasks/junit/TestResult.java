@@ -73,6 +73,11 @@ public final class TestResult extends MetaTabulatedResult {
 
     private static final Logger LOGGER = Logger.getLogger(JUnitResultArchiver.class.getName());
 
+    /**
+     * Used to keep {@link #suites} with {@code null} node ID in {@link #suitesByNode}.
+     */
+    private static final String NULL_NODE_ID_PLACEHOLDER = "Null ID";
+
     @SuppressFBWarnings(
             value = "SE_BAD_FIELD",
             justification = "We do not expect TestResult to be serialized when this field is set.")
@@ -90,7 +95,8 @@ public final class TestResult extends MetaTabulatedResult {
     private transient Map<String, Collection<SuiteResult>> suitesByName;
 
     /**
-     * {@link #suites} keyed by their node ID for faster lookup. May be empty.
+     * {@link #suites} keyed by their node ID for faster lookup. If suite has {@code null} node ID,
+     * it will be in list with {@link #NULL_NODE_ID_PLACEHOLDER} key.
      */
     private transient Map<String, List<SuiteResult>> suitesByNode;
 
@@ -1001,6 +1007,11 @@ public final class TestResult extends MetaTabulatedResult {
     }
 
     @NonNull
+    public Collection<String> getNodeIds() {
+        return Collections.unmodifiableSet(suitesByNode.keySet());
+    }
+
+    @NonNull
     public TestResult getResultByNode(@NonNull String nodeId) {
         return getResultByNodes(Collections.singletonList(nodeId));
     }
@@ -1059,9 +1070,7 @@ public final class TestResult extends MetaTabulatedResult {
             s.setParent(this); // kluge to prevent double-counting the results
             suitesByName.merge(s.getName(), Collections.singleton(s), (a, b) -> Stream.concat(a.stream(), b.stream())
                     .collect(Collectors.toList()));
-            if (s.getNodeId() != null) {
-                addSuiteByNode(s);
-            }
+            addSuiteByNode(s);
 
             List<CaseResult> cases = s.getCases();
 
@@ -1123,9 +1132,7 @@ public final class TestResult extends MetaTabulatedResult {
             suitesByName.merge(s.getName(), Collections.singleton(s), (a, b) -> Stream.concat(a.stream(), b.stream())
                     .collect(Collectors.toList()));
 
-            if (s.getNodeId() != null) {
-                addSuiteByNode(s);
-            }
+            addSuiteByNode(s);
 
             totalTests += s.getCases().size();
             for (CaseResult cr : s.getCases()) {
@@ -1173,20 +1180,18 @@ public final class TestResult extends MetaTabulatedResult {
     }
 
     private void addSuiteByNode(SuiteResult s) {
-        String nodeId = s.getNodeId();
+        String nodeId = s.getNodeId() == null ? NULL_NODE_ID_PLACEHOLDER : s.getNodeId();
 
-        if (nodeId != null) {
-            // If we don't already have an entry for this node, initialize a list for it.
-            if (suitesByNode.get(nodeId) == null) {
-                suitesByNode.put(nodeId, new ArrayList<>());
-            }
-            // Add the suite to the list for the node in the map. Phew.
-            suitesByNode.get(nodeId).add(s);
+        // If we don't already have an entry for this node, initialize a list for it.
+        if (suitesByNode.get(nodeId) == null) {
+            suitesByNode.put(nodeId, new ArrayList<>());
+        }
+        // Add the suite to the list for the node in the map. Phew.
+        suitesByNode.get(nodeId).add(s);
 
-            List<String> enclosingBlocks = new ArrayList<>(s.getEnclosingBlocks());
-            if (!enclosingBlocks.isEmpty()) {
-                populateBlocks(enclosingBlocks, nodeId, null);
-            }
+        List<String> enclosingBlocks = new ArrayList<>(s.getEnclosingBlocks());
+        if (!enclosingBlocks.isEmpty()) {
+            populateBlocks(enclosingBlocks, nodeId, null);
         }
     }
 

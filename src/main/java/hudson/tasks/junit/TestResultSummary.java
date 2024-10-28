@@ -1,6 +1,10 @@
 package hudson.tasks.junit;
 
 import java.io.Serializable;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.Whitelisted;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -13,6 +17,7 @@ public class TestResultSummary implements Serializable {
     private int skipCount;
     private int passCount;
     private int totalCount;
+    private Map<String, NodeSummary> nodeSummaries = new HashMap<>();
 
     @Deprecated
     @Restricted(DoNotUse.class)
@@ -38,6 +43,8 @@ public class TestResultSummary implements Serializable {
                 }
             }
         }
+
+        summarizePerNode(result);
     }
 
     @Whitelisted
@@ -58,5 +65,41 @@ public class TestResultSummary implements Serializable {
     @Whitelisted
     public int getTotalCount() {
         return totalCount;
+    }
+
+    @Whitelisted
+    public Collection<String> getNodeIds() {
+        return Collections.unmodifiableSet(nodeSummaries.keySet());
+    }
+
+    @Whitelisted
+    public NodeSummary getNodeSummaryByNodeId(String nodeId) {
+        return nodeSummaries.get(nodeId);
+    }
+
+    private void summarizePerNode(TestResult result) {
+        nodeSummaries.clear();
+
+        for (String nodeId : result.getNodeIds()) {
+            nodeSummaries.put(nodeId, new NodeSummary(nodeId, result));
+        }
+    }
+
+    public class NodeSummary implements Serializable {
+        public final String nodeId;
+        public final int failCount;
+        public final int skipCount;
+        public final int passCount;
+        public final int totalCount;
+
+        public NodeSummary(String nodeId, TestResult result) {
+            TestResult nodeResult = result.getResultByNode(nodeId);
+
+            this.nodeId = nodeId;
+            this.failCount = nodeResult.getFailCount();
+            this.skipCount = nodeResult.getSkipCount();
+            this.passCount = nodeResult.getPassCount();
+            this.totalCount = nodeResult.getTotalCount();
+        }
     }
 }
