@@ -40,6 +40,18 @@ public class TestResultTrendChart {
         return getLinesChartModel(dataSet, passedColor);
     }
 
+    public LinesChartModel create(
+            @NonNull final Iterable results,
+            @NonNull final String nodeId,
+            final ChartModelConfiguration configuration,
+            final PassedColor passedColor) {
+        TestResultTrendSeriesBuilder builder = new TestResultTrendSeriesBuilder();
+        builder.setNodeId(nodeId);
+        LinesDataSet dataSet = builder.createDataSet(configuration, results);
+
+        return getLinesChartModel(dataSet, passedColor);
+    }
+
     public LinesChartModel createFromTestObject(final Iterable results, final ChartModelConfiguration configuration) {
         return createFromTestObject(results, configuration, PassedColor.GREEN);
     }

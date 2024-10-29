@@ -39,6 +39,8 @@ import io.jenkins.plugins.junit.storage.FileJunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.JunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.TestResultImpl;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
@@ -144,6 +146,31 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
         return new TestResultTrendChart().create(buildHistory, configuration, passedColor);
     }
 
+    private List<LinesChartModel> createChartModelsForNodes(
+            ChartModelConfiguration configuration, TestResultTrendChart.PassedColor passedColor) {
+        List<LinesChartModel> models = new LinkedList<>();
+        Run<?, ?> lastCompletedBuild = job.getLastCompletedBuild();
+
+        JunitTestResultStorage storage = JunitTestResultStorage.find();
+        assert storage instanceof FileJunitTestResultStorage;
+
+        TestResultTrendChart chart = new TestResultTrendChart();
+        for (String nodeId : getNodeIds(lastCompletedBuild)) {
+            TestResultActionIterable buildHistory = createBuildHistory(lastCompletedBuild);
+            LinesChartModel model = chart.create(buildHistory, nodeId, configuration, passedColor);
+            models.add(model);
+        }
+
+        return models;
+    }
+
+    private Collection<String> getNodeIds(Run<?, ?> run) {
+        TestResultActionIterable iterable = createBuildHistory(run);
+        AbstractTestResultAction<?> lastAction = iterable.iterator().next().getResult();
+
+        return lastAction.getSummary().getNodeIds();
+    }
+
     @CheckForNull
     private TestResultActionIterable createBuildHistory(final Run<?, ?> lastCompletedBuild) {
         // some plugins that depend on junit seem to attach the action even though there's no run
@@ -240,6 +267,14 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
         TestResultTrendChart.PassedColor useBlue = JACKSON_FACADE.getBoolean(configuration, "useBlue", false)
                 ? TestResultTrendChart.PassedColor.BLUE
                 : TestResultTrendChart.PassedColor.GREEN;
+        boolean nodewise = JACKSON_FACADE.getBoolean(configuration, "nodewise", false);
+
+        if (nodewise) {
+            List<LinesChartModel> models =
+                    createChartModelsForNodes(ChartModelConfiguration.fromJson(configuration), useBlue);
+            return new JacksonFacade().toJson(models);
+        }
+
         return new JacksonFacade().toJson(createChartModel(ChartModelConfiguration.fromJson(configuration), useBlue));
     }
 
