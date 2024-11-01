@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 The MIT License
 
@@ -23,7 +24,8 @@ THE SOFTWARE.
 -->
 
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:c="/charts" xmlns:st="jelly:stapler">
+<j:jelly xmlns:j="jelly:core" xmlns:c="/charts" xmlns:st="jelly:stapler"
+    xmlns:t="/lib/hudson" xmlns:test="/lib/hudson/test">
   <c:trend-setup suffix="junit">
     <div class="mb-3">
       <input class="form-check-input" type="checkbox" value="" id="junit-use-blue" />
@@ -32,9 +34,20 @@ THE SOFTWARE.
       </label>
     </div>
     <div class="mb-3">
-      <input class="form-check-input" type="checkbox" value="" id="junit-nodewise" />
-      <label class="form-check-label" for="junit-nodewise">
-        Show passed tests for each node separately
+    <input type="text" id="junit-node-id" class="form-control" list="autofill" autocomplete="off" placeholder="Aggregated"/>
+      <datalist id="autofill">
+        <option value="Aggregated">All nodes</option>
+        <j:forEach var="action" items="${it.lastCompletedBuild.actions}">
+          <j:if test="${action.getClass().getName().contains('TestResultAction')}">
+            <j:forEach var="nodeId" items="${action.getSummary().getNodeIds()}">
+              <option value="${nodeId}">Node with given id</option>
+            </j:forEach>
+            <j:break/>
+          </j:if>
+        </j:forEach>
+      </datalist>
+      <label class="form-check-label" for="junit-node-id">
+        Choose node to show
       </label>
     </div>
     <div class="mb-3">
@@ -45,8 +58,6 @@ THE SOFTWARE.
   </c:trend-setup>
 
   <c:trend-chart it="${from}" title="${%Test Result Trend}" enableLinks="true" configurationId="junit"/>
-
-
   <st:adjunct includes="hudson.tasks.test.TestResultProjectAction.junit-trend-config" />
 
 </j:jelly>
