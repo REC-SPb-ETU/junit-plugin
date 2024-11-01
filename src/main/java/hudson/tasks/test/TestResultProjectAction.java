@@ -39,8 +39,6 @@ import io.jenkins.plugins.junit.storage.FileJunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.JunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.TestResultImpl;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
@@ -121,11 +119,11 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
 
     @Deprecated
     protected LinesChartModel createChartModel() {
-        return createChartModel(new ChartModelConfiguration(), TestResultTrendChart.PassedColor.BLUE);
+        return createChartModel(new ChartModelConfiguration(), TestResultTrendChart.PassedColor.BLUE, null);
     }
 
     private LinesChartModel createChartModel(
-            ChartModelConfiguration configuration, TestResultTrendChart.PassedColor passedColor) {
+            ChartModelConfiguration configuration, TestResultTrendChart.PassedColor passedColor, String nodeId) {
         Run<?, ?> lastCompletedBuild = job.getLastCompletedBuild();
 
         JunitTestResultStorage storage = JunitTestResultStorage.find();
@@ -136,6 +134,8 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
             if (summary.isEmpty()) {
                 return new LinesChartModel();
             }
+
+            //TODO implement node for summary
             return new TestResultTrendChart().create(summary, passedColor);
         }
 
@@ -143,32 +143,7 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
         if (buildHistory == null) {
             return new LinesChartModel();
         }
-        return new TestResultTrendChart().create(buildHistory, configuration, passedColor);
-    }
-
-    private List<LinesChartModel> createChartModelsForNodes(
-            ChartModelConfiguration configuration, TestResultTrendChart.PassedColor passedColor) {
-        List<LinesChartModel> models = new LinkedList<>();
-        Run<?, ?> lastCompletedBuild = job.getLastCompletedBuild();
-
-        JunitTestResultStorage storage = JunitTestResultStorage.find();
-        assert storage instanceof FileJunitTestResultStorage;
-
-        TestResultTrendChart chart = new TestResultTrendChart();
-        for (String nodeId : getNodeIds(lastCompletedBuild)) {
-            TestResultActionIterable buildHistory = createBuildHistory(lastCompletedBuild);
-            LinesChartModel model = chart.create(buildHistory, nodeId, configuration, passedColor);
-            models.add(model);
-        }
-
-        return models;
-    }
-
-    private Collection<String> getNodeIds(Run<?, ?> run) {
-        TestResultActionIterable iterable = createBuildHistory(run);
-        AbstractTestResultAction<?> lastAction = iterable.iterator().next().getResult();
-
-        return lastAction.getSummary().getNodeIds();
+        return new TestResultTrendChart().create(buildHistory, nodeId, configuration, passedColor);
     }
 
     @CheckForNull
@@ -267,15 +242,19 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
         TestResultTrendChart.PassedColor useBlue = JACKSON_FACADE.getBoolean(configuration, "useBlue", false)
                 ? TestResultTrendChart.PassedColor.BLUE
                 : TestResultTrendChart.PassedColor.GREEN;
-        boolean nodewise = JACKSON_FACADE.getBoolean(configuration, "nodewise", false);
+        String nodeId = resolveNodeId(JACKSON_FACADE.getString(configuration, "nodeId", null));
 
-        if (nodewise) {
-            List<LinesChartModel> models =
-                    createChartModelsForNodes(ChartModelConfiguration.fromJson(configuration), useBlue);
-            return new JacksonFacade().toJson(models);
+        return new JacksonFacade().toJson(createChartModel(ChartModelConfiguration.fromJson(configuration), useBlue, nodeId));
+    }
+
+    private String resolveNodeId(String nodeId) {
+        final String aggregated = "Aggregated";
+
+        if (aggregated.equals(nodeId) || nodeId == null || nodeId.isBlank()) {
+            return null;
         }
 
-        return new JacksonFacade().toJson(createChartModel(ChartModelConfiguration.fromJson(configuration), useBlue));
+        return nodeId;
     }
 
     @Override

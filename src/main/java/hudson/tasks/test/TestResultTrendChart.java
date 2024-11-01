@@ -49,6 +49,11 @@ public class TestResultTrendChart {
         builder.setNodeId(nodeId);
         LinesDataSet dataSet = builder.createDataSet(configuration, results);
 
+        // node with given id does not exist
+        if (dataSet.isEmpty()) {
+            return new LinesChartModel();
+        }
+
         return getLinesChartModel(dataSet, passedColor);
     }
 
