@@ -99,6 +99,10 @@ public final class TestResult extends MetaTabulatedResult {
      * it will be in list with {@link #NULL_NODE_ID_PLACEHOLDER} key.
      */
     private transient Map<String, List<SuiteResult>> suitesByNode;
+    /**
+     * {@link #suites} keyed by their executor node name for faster lookup.
+     */
+    private transient Map<String, List<SuiteResult>> suitesByExecutorNodeName;
 
     /**
      * Results tabulated by package.
@@ -1007,8 +1011,13 @@ public final class TestResult extends MetaTabulatedResult {
     }
 
     @NonNull
-    public Collection<String> getNodeIds() {
-        return Collections.unmodifiableSet(suitesByNode.keySet());
+    public Collection<String> getExecutorNodeNames() {
+        // for compatibility with jobs which used older versions of plugin
+        if (suitesByExecutorNodeName == null) {
+            return Collections.emptySet();
+        }
+
+        return Collections.unmodifiableSet(suitesByExecutorNodeName.keySet());
     }
 
     @NonNull
@@ -1024,6 +1033,29 @@ public final class TestResult extends MetaTabulatedResult {
         TestResult result = new TestResult();
         for (String n : nodeIds) {
             List<SuiteResult> suites = suitesByNode.get(n);
+            if (suites != null) {
+                for (SuiteResult s : suites) {
+                    result.add(s);
+                }
+            }
+        }
+        result.setParentAction(parentAction);
+
+        return result;
+    }
+
+    @NonNull
+    public TestResult getResultByExecutorNodeName(@NonNull String executorNodeName) {
+        return getResultByExecutorNodeNames(Collections.singletonList(executorNodeName));
+    }
+
+    public TestResult getResultByExecutorNodeNames(@NonNull List<String> executorNodeNames) {
+        if (impl != null) {
+            return impl.getResultByExecutorNodeNames(executorNodeNames);
+        }
+        TestResult result = new TestResult();
+        for (String n : executorNodeNames) {
+            List<SuiteResult> suites = suitesByExecutorNodeName.get(n);
             if (suites != null) {
                 for (SuiteResult s : suites) {
                     result.add(s);
@@ -1056,6 +1088,7 @@ public final class TestResult extends MetaTabulatedResult {
         // TODO: free children? memmory leak?
         suitesByName = new HashMap<>();
         suitesByNode = new HashMap<>();
+        suitesByExecutorNodeName = new HashMap<>();
         testsByBlock = new HashMap<>();
         failedTests = new ArrayList<>();
         skippedTests = null;
@@ -1071,6 +1104,7 @@ public final class TestResult extends MetaTabulatedResult {
             suitesByName.merge(s.getName(), Collections.singleton(s), (a, b) -> Stream.concat(a.stream(), b.stream())
                     .collect(Collectors.toList()));
             addSuiteByNode(s);
+            addSuiteByExecutorNodeName(s);
 
             List<CaseResult> cases = s.getCases();
 
@@ -1193,6 +1227,16 @@ public final class TestResult extends MetaTabulatedResult {
         if (!enclosingBlocks.isEmpty()) {
             populateBlocks(enclosingBlocks, nodeId, null);
         }
+    }
+
+    private void addSuiteByExecutorNodeName(SuiteResult s) {
+        String nodeName = s.getExecutorNodeName();
+
+        if (suitesByExecutorNodeName.get(nodeName) == null) {
+            suitesByExecutorNodeName.put(nodeName, new ArrayList<>());
+        }
+
+        suitesByExecutorNodeName.get(nodeName).add(s);
     }
 
     @NonNull

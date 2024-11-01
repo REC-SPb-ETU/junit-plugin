@@ -44,7 +44,7 @@ public class TestResultSummary implements Serializable {
             }
         }
 
-        summarizePerNode(result);
+        summarizePerNodes(result);
     }
 
     @Whitelisted
@@ -68,34 +68,37 @@ public class TestResultSummary implements Serializable {
     }
 
     @Whitelisted
-    public Collection<String> getNodeIds() {
+    public Collection<String> getExecutorNodeNames() {
         return Collections.unmodifiableSet(nodeSummaries.keySet());
     }
 
     @Whitelisted
-    public NodeSummary getNodeSummaryByNodeId(String nodeId) {
-        return nodeSummaries.get(nodeId);
+    public NodeSummary getNodeSummaryByExecutorNodeName(String executorNodeName) {
+        return nodeSummaries.get(executorNodeName);
     }
 
-    private void summarizePerNode(TestResult result) {
+    private void summarizePerNodes(TestResult result) {
         nodeSummaries.clear();
 
-        for (String nodeId : result.getNodeIds()) {
-            nodeSummaries.put(nodeId, new NodeSummary(nodeId, result));
+        for (String executorNodeName : result.getExecutorNodeNames()) {
+            nodeSummaries.put(executorNodeName, new NodeSummary(executorNodeName, result));
         }
     }
 
+    /**
+     * Summary of results of tests performed on specific node.
+     */
     public class NodeSummary implements Serializable {
-        public final String nodeId;
+        public final String executorNodeName;
         public final int failCount;
         public final int skipCount;
         public final int passCount;
         public final int totalCount;
 
-        public NodeSummary(String nodeId, TestResult result) {
-            TestResult nodeResult = result.getResultByNode(nodeId);
+        public NodeSummary(String executorNodeName, TestResult result) {
+            TestResult nodeResult = result.getResultByExecutorNodeName(executorNodeName);
 
-            this.nodeId = nodeId;
+            this.executorNodeName = executorNodeName;
             this.failCount = nodeResult.getFailCount();
             this.skipCount = nodeResult.getSkipCount();
             this.passCount = nodeResult.getPassCount();

@@ -4,6 +4,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.model.Node;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -43,11 +44,13 @@ public class JUnitResultsStepExecution extends SynchronousNonBlockingStepExecuti
         FlowNode node = getContext().get(FlowNode.class);
 
         String nodeId = node.getId();
+        String executorNodeName = getContext().get(Node.class).getNodeName();
 
         List<FlowNode> enclosingBlocks = getEnclosingStagesAndParallels(node);
 
         PipelineTestDetails pipelineTestDetails = new PipelineTestDetails();
         pipelineTestDetails.setNodeId(nodeId);
+        pipelineTestDetails.setExecutorNodeName(executorNodeName);
         pipelineTestDetails.setEnclosingBlocks(getEnclosingBlockIds(enclosingBlocks));
         pipelineTestDetails.setEnclosingBlockNames(getEnclosingBlockNames(enclosingBlocks));
 

@@ -11,6 +11,7 @@ import java.util.List;
  */
 public class PipelineTestDetails implements Serializable {
     private String nodeId;
+    private String executorNodeName;
     private List<String> enclosingBlocks = new ArrayList<>();
     private List<String> enclosingBlockNames = new ArrayList<>();
 
@@ -21,6 +22,15 @@ public class PipelineTestDetails implements Serializable {
 
     public void setNodeId(@NonNull String nodeId) {
         this.nodeId = nodeId;
+    }
+
+    @CheckForNull
+    public String getExecutorNodeName() {
+        return executorNodeName;
+    }
+
+    public void setExecutorNodeName(@NonNull String executorNodeName) {
+        this.executorNodeName = executorNodeName;
     }
 
     @NonNull

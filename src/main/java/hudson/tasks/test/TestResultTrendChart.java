@@ -5,6 +5,7 @@ import edu.hm.hafner.echarts.LineSeries;
 import edu.hm.hafner.echarts.LinesChartModel;
 import edu.hm.hafner.echarts.LinesDataSet;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.tasks.junit.SummarySeriesConverter;
 import hudson.tasks.junit.TrendTestResultSummary;
 import io.jenkins.plugins.echarts.JenkinsPalette;
 import java.util.List;
@@ -22,6 +23,19 @@ public class TestResultTrendChart {
     public LinesChartModel create(final List<TrendTestResultSummary> results, final PassedColor passedColor) {
         LinesDataSet dataset = new LinesDataSet();
         results.forEach(result -> dataset.add(result.getDisplayName(), result.toMap(), result.getBuildNumber()));
+
+        return getLinesChartModel(dataset, passedColor);
+    }
+
+    public LinesChartModel create(
+            final List<TrendTestResultSummary> results, final PassedColor passedColor, final String executorNodeName) {
+        if (executorNodeName == null) {
+            return create(results, passedColor);
+        }
+
+        LinesDataSet dataset = new LinesDataSet();
+        results.forEach(result ->
+                dataset.add(result.getDisplayName(), result.toMap(executorNodeName), result.getBuildNumber()));
 
         return getLinesChartModel(dataset, passedColor);
     }
@@ -46,7 +60,7 @@ public class TestResultTrendChart {
             final ChartModelConfiguration configuration,
             final PassedColor passedColor) {
         TestResultTrendSeriesBuilder builder = new TestResultTrendSeriesBuilder();
-        builder.setNodeId(nodeId);
+        builder.setNodeName(nodeId);
         LinesDataSet dataSet = builder.createDataSet(configuration, results);
 
         // node with given id does not exist
@@ -76,17 +90,17 @@ public class TestResultTrendChart {
                 passedColor == PassedColor.BLUE ? JenkinsPalette.BLUE.normal() : JenkinsPalette.GREEN.normal(),
                 LineSeries.StackedMode.STACKED,
                 LineSeries.FilledMode.FILLED);
-        passed.addAll(dataSet.getSeries(TestResultTrendSeriesBuilder.PASSED_KEY));
+        passed.addAll(dataSet.getSeries(SummarySeriesConverter.PASSED_KEY));
         model.addSeries(passed);
 
         LineSeries skipped = new LineSeries(
                 "Skipped", JenkinsPalette.GREY.normal(), LineSeries.StackedMode.STACKED, LineSeries.FilledMode.FILLED);
-        skipped.addAll(dataSet.getSeries(TestResultTrendSeriesBuilder.SKIPPED_KEY));
+        skipped.addAll(dataSet.getSeries(SummarySeriesConverter.SKIPPED_KEY));
         model.addSeries(skipped);
 
         LineSeries failed = new LineSeries(
                 "Failed", JenkinsPalette.RED.normal(), LineSeries.StackedMode.STACKED, LineSeries.FilledMode.FILLED);
-        failed.addAll(dataSet.getSeries(TestResultTrendSeriesBuilder.FAILED_KEY));
+        failed.addAll(dataSet.getSeries(SummarySeriesConverter.FAILED_KEY));
         model.addSeries(failed);
 
         return model;

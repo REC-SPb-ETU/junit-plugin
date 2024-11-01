@@ -123,7 +123,7 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
     }
 
     private LinesChartModel createChartModel(
-            ChartModelConfiguration configuration, TestResultTrendChart.PassedColor passedColor, String nodeId) {
+            ChartModelConfiguration configuration, TestResultTrendChart.PassedColor passedColor, String nodeName) {
         Run<?, ?> lastCompletedBuild = job.getLastCompletedBuild();
 
         JunitTestResultStorage storage = JunitTestResultStorage.find();
@@ -135,15 +135,14 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
                 return new LinesChartModel();
             }
 
-            //TODO implement node for summary
-            return new TestResultTrendChart().create(summary, passedColor);
+            return new TestResultTrendChart().create(summary, passedColor, nodeName);
         }
 
         TestResultActionIterable buildHistory = createBuildHistory(lastCompletedBuild);
         if (buildHistory == null) {
             return new LinesChartModel();
         }
-        return new TestResultTrendChart().create(buildHistory, nodeId, configuration, passedColor);
+        return new TestResultTrendChart().create(buildHistory, nodeName, configuration, passedColor);
     }
 
     @CheckForNull
@@ -242,19 +241,31 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
         TestResultTrendChart.PassedColor useBlue = JACKSON_FACADE.getBoolean(configuration, "useBlue", false)
                 ? TestResultTrendChart.PassedColor.BLUE
                 : TestResultTrendChart.PassedColor.GREEN;
-        String nodeId = resolveNodeId(JACKSON_FACADE.getString(configuration, "nodeId", null));
+        String nodeName = resolveNodeName(JACKSON_FACADE.getString(configuration, "nodeName", null));
 
-        return new JacksonFacade().toJson(createChartModel(ChartModelConfiguration.fromJson(configuration), useBlue, nodeId));
+        return new JacksonFacade()
+                .toJson(createChartModel(ChartModelConfiguration.fromJson(configuration), useBlue, nodeName));
     }
 
-    private String resolveNodeId(String nodeId) {
+    private String resolveNodeName(String nodeName) {
         final String aggregated = "Aggregated";
+        final String masterNode = "Master node";
 
-        if (aggregated.equals(nodeId) || nodeId == null || nodeId.isBlank()) {
+        // show all nodes
+        if (aggregated.equals(nodeName) || nodeName == null || nodeName.isBlank()) {
             return null;
         }
+        // show master node
+        if (masterNode.equals(nodeName)) {
+            // According to javadoc of hudson.model.Node#getName(),
+            // it returns blank string if called on master node,
+            // but in frontend we can't use blank string as option of datalist
+            // (it will not be displayed) so we use non-empty string and resolve
+            // it here
+            return "";
+        }
 
-        return nodeId;
+        return nodeName;
     }
 
     @Override

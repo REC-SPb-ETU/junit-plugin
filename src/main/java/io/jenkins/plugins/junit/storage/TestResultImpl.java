@@ -112,6 +112,9 @@ public interface TestResultImpl {
     @NonNull
     TestResult getResultByNodes(@NonNull List<String> nodeIds);
 
+    @NonNull
+    TestResult getResultByExecutorNodeNames(@NonNull List<String> executorNodeNames);
+
     /**
      * The test result for the last run that has a test result
      * Null when there's no previous result.

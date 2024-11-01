@@ -6,7 +6,7 @@ function fillJunit(trendConfiguration, jsonConfiguration) {
 function saveJunit(trendConfiguration) {
   return {
     'useBlue': trendConfiguration.find('#junit-use-blue').is(':checked'),
-    'nodeId': trendConfiguration.find('#junit-node-id').prop('value')
+    'nodeName': trendConfiguration.find('#junit-node-name').prop('value')
   };
 }
 

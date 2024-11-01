@@ -25,6 +25,7 @@ package hudson.tasks.junit;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.model.Node;
 import hudson.tasks.test.PipelineTestDetails;
 import hudson.tasks.test.TestObject;
 import hudson.util.io.ParserConfigurator;
@@ -98,6 +99,11 @@ public final class SuiteResult implements Serializable {
      */
     private String nodeId;
 
+    /**
+     * Name of {@link Node} this suite was generated in.
+     */
+    private String executorNodeName;
+
     private List<String> enclosingBlocks = new ArrayList<>();
 
     private List<String> enclosingBlockNames = new ArrayList<>();
@@ -124,10 +130,13 @@ public final class SuiteResult implements Serializable {
         this.stderr = CaseResult.fixNULs(stderr);
         this.stdout = CaseResult.fixNULs(stdout);
         // runId is generally going to be not null, but we only care about it if both it and nodeId are not null.
-        if (pipelineTestDetails != null && pipelineTestDetails.getNodeId() != null) {
-            this.nodeId = pipelineTestDetails.getNodeId();
-            this.enclosingBlocks.addAll(pipelineTestDetails.getEnclosingBlocks());
-            this.enclosingBlockNames.addAll(pipelineTestDetails.getEnclosingBlockNames());
+        if (pipelineTestDetails != null) {
+            if (pipelineTestDetails.getNodeId() != null) {
+                this.nodeId = pipelineTestDetails.getNodeId();
+                this.enclosingBlocks.addAll(pipelineTestDetails.getEnclosingBlocks());
+                this.enclosingBlockNames.addAll(pipelineTestDetails.getEnclosingBlockNames());
+            }
+            this.executorNodeName = pipelineTestDetails.getExecutorNodeName();
         } else {
             this.nodeId = null;
         }
@@ -143,6 +152,7 @@ public final class SuiteResult implements Serializable {
         this.timestamp = src.timestamp;
         this.time = src.time;
         this.nodeId = src.nodeId;
+        this.executorNodeName = src.executorNodeName;
         this.enclosingBlocks = new ArrayList<String>(src.enclosingBlocks);
         this.enclosingBlockNames = new ArrayList<String>(src.enclosingBlockNames);
         this.stdout = src.stdout;
@@ -196,6 +206,9 @@ public final class SuiteResult implements Serializable {
                         break;
                     case "nodeId":
                         r.nodeId = reader.getElementText();
+                        break;
+                    case "executorNodeName":
+                        r.executorNodeName = reader.getElementText();
                         break;
                     case "enclosingBlocks":
                         parseEnclosingBlocks(r, reader, context, ver);
@@ -439,6 +452,7 @@ public final class SuiteResult implements Serializable {
         this.id = suite.attributeValue("id");
         if (pipelineTestDetails != null && pipelineTestDetails.getNodeId() != null) {
             this.nodeId = pipelineTestDetails.getNodeId();
+            this.executorNodeName = pipelineTestDetails.getExecutorNodeName();
             this.enclosingBlocks.addAll(pipelineTestDetails.getEnclosingBlocks());
             this.enclosingBlockNames.addAll(pipelineTestDetails.getEnclosingBlockNames());
         }
@@ -577,6 +591,15 @@ public final class SuiteResult implements Serializable {
     @CheckForNull
     public String getNodeId() {
         return nodeId;
+    }
+
+    /**
+     * The possibly-null {@link Node} name this suite was generated in.
+     */
+    @Exported(visibility = 9)
+    @CheckForNull
+    public String getExecutorNodeName() {
+        return executorNodeName;
     }
 
     /**
