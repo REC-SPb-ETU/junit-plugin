@@ -41,6 +41,7 @@ import io.jenkins.plugins.junit.storage.JunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.TestResultImpl;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
@@ -281,6 +282,11 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
      */
     public List<String> getAvailableNodeNames() {
         List<Node> nodes = Jenkins.get().getNodes();
+
+        if (nodes.isEmpty()) {
+            return Collections.singletonList(AGGREGATED_NAME);
+        }
+
         List<String> nodeNames = new ArrayList<>(2 + nodes.size());
 
         nodeNames.add(AGGREGATED_NAME);
