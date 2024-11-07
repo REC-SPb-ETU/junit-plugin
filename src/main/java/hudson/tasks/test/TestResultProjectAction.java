@@ -30,6 +30,7 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
 import hudson.model.Job;
+import hudson.model.Node;
 import hudson.model.Run;
 import hudson.tasks.junit.JUnitResultArchiver;
 import hudson.tasks.junit.TrendTestResultSummary;
@@ -39,9 +40,12 @@ import io.jenkins.plugins.junit.storage.FileJunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.JunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.TestResultImpl;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.Ancestor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -58,6 +62,8 @@ import org.kohsuke.stapler.bind.JavaScriptMethod;
  */
 public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncConfigurableTrendChart {
     private static final JacksonFacade JACKSON_FACADE = new JacksonFacade();
+    private static final String AGGREGATED_NAME = "Aggregated";
+    private static final String MASTER_NODE_NAME = "Master Node";
 
     /**
      * Project that owns this action.
@@ -248,15 +254,12 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
     }
 
     private String resolveNodeName(String nodeName) {
-        final String aggregated = "Aggregated";
-        final String masterNode = "Master node";
-
         // show all nodes
-        if (aggregated.equals(nodeName) || nodeName == null || nodeName.isBlank()) {
+        if (AGGREGATED_NAME.equals(nodeName) || nodeName == null || nodeName.isBlank()) {
             return null;
         }
         // show master node
-        if (masterNode.equals(nodeName)) {
+        if (MASTER_NODE_NAME.equals(nodeName)) {
             // According to javadoc of hudson.model.Node#getName(),
             // it returns blank string if called on master node,
             // but in frontend we can't use blank string as option of datalist
@@ -271,5 +274,19 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
     @Override
     public boolean isTrendVisible() {
         return true;
+    }
+
+    /**
+     * Returns list of names belonging to nodes that can be shown.
+     */
+    public List<String> getAvailableNodeNames() {
+        List<Node> nodes = Jenkins.get().getNodes();
+        List<String> nodeNames = new ArrayList<>(2 + nodes.size());
+
+        nodeNames.add(AGGREGATED_NAME);
+        nodeNames.add(MASTER_NODE_NAME);
+        nodeNames.addAll(nodes.stream().map(n -> n.getDisplayName()).collect(Collectors.toList()));
+
+        return nodeNames;
     }
 }

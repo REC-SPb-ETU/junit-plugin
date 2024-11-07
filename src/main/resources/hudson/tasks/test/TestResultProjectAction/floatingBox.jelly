@@ -25,35 +25,30 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:c="/charts" xmlns:st="jelly:stapler">
-  <j:invokeStatic var="jenkinsInstance" className="jenkins.model.Jenkins" method="get"/>
-  <c:trend-setup suffix="junit">
-    <div class="mb-3">
-      <input class="form-check-input" type="checkbox" value="" id="junit-use-blue" />
-      <label class="form-check-label" for="junit-use-blue">
-        Show passed tests in blue (rather than in green)
-      </label>
-    </div>
-    <div class="mb-3">
-    <input type="text" id="junit-node-name" class="form-control" list="autofill" autocomplete="off" placeholder="Aggregated"/>
-      <datalist id="autofill">
-        <option value="Aggregated">All nodes</option>
-        <option value="Master node">Built-in node</option>
-          <j:forEach var="node" items="${jenkinsInstance.nodes}">
-            <option value="${node.displayName}">Node with name above</option>
-          </j:forEach>
-      </datalist>
-      <label class="form-check-label" for="junit-node-id">
-        Choose node to show
-      </label>
-    </div>
-    <div class="mb-3">
-      <label class="form-label fw-bold">
-        General configuration
-      </label>
-    </div>
-  </c:trend-setup>
+  <j:forEach indexVar="idx" var="nodeName" items="${from.availableNodeNames}">
+    <c:trend-setup suffix="${idx}-junit">
+      <div class="mb-3">
+        <input class="form-check-input" type="checkbox" value="" id="${idx}-junit-use-blue"/>
+        <label class="form-check-label" for="${idx}-junit-use-blue">
+          Show passed tests in blue (rather than in green)
+        </label>
+      </div>
+      <input type="hidden" id="${idx}-junit-node-name" value="${nodeName}"/>
+      <div class="mb-3">
+        <label class="form-label fw-bold">
+          General configuration
+        </label>
+      </div>
+    </c:trend-setup>
 
-  <c:trend-chart it="${from}" title="${%Test Result Trend}" enableLinks="true" configurationId="junit"/>
+    <c:trend-chart
+      it="${from}"
+      title="${nodeName}: ${%Test Result Trend}"
+      enableLinks="true"
+      configurationId="${idx}-junit"
+    />
+  </j:forEach>
+
   <st:adjunct includes="hudson.tasks.test.TestResultProjectAction.junit-trend-config" />
 
 </j:jelly>

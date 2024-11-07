@@ -1,13 +1,24 @@
-function fillJunit(trendConfiguration, jsonConfiguration) {
-  const useBlue = jsonConfiguration['useBlue'];
-  trendConfiguration.find('#junit-use-blue').prop('checked', !!useBlue);
+let getTrendConfigPrefixByidx = (idx) => {
+  return `${idx}-junit`
 }
 
-function saveJunit(trendConfiguration) {
+let fillJunit = (trendConfiguration, jsonConfiguration, chartIdx) => {
+  const useBlue = jsonConfiguration['useBlue']
+  trendConfiguration.find(`${chartIdx}-junit-use-blue`).prop('checked', !!useBlue)
+}
+
+let saveJunit = (trendConfiguration, chartIdx) => {
   return {
-    'useBlue': trendConfiguration.find('#junit-use-blue').is(':checked'),
-    'nodeName': trendConfiguration.find('#junit-node-name').prop('value')
-  };
+    'useBlue': trendConfiguration.find(`#${chartIdx}-junit-use-blue`).is(':checked'),
+    'nodeName': trendConfiguration.find(`#${chartIdx}-junit-node-name`).prop('value')
+  }
 }
 
-echartsJenkinsApi.configureTrend('junit', fillJunit, saveJunit);
+let numCharts = document.getElementsByClassName('echarts-trend').length
+for (let i = 0; i < numCharts; i++) {
+  echartsJenkinsApi.configureTrend(
+    getTrendConfigPrefixByidx(i),
+    (tc, jc) => fillJunit(tc, jc, i),
+    (tc) => saveJunit(tc, i)
+  )
+}
