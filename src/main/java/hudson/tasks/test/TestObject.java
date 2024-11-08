@@ -158,13 +158,13 @@ public abstract class TestObject extends hudson.tasks.junit.TestObject {
         TestObject cur = this;
         // Walk up my ancestors from leaf to root, looking for "it"
         // and accumulating a relative url as I go
-        while (next != null && it != next) {
+        while (next != null && !it.getId().equals(next.getId())) {
             cur = next;
             buf.insert(0, '/');
             buf.insert(0, cur.getSafeName());
             next = cur.getParent();
         }
-        if (it == next) {
+        if (next != null && it.getId().equals(next.getId())) {
             return buf.toString();
         } else {
             // Keep adding on to the string we've built so far
