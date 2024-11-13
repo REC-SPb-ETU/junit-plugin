@@ -33,6 +33,7 @@ import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.tasks.junit.JUnitResultArchiver;
+import hudson.tasks.junit.TestResultAction;
 import hudson.tasks.junit.TrendTestResultSummary;
 import io.jenkins.plugins.echarts.AsyncConfigurableTrendChart;
 import io.jenkins.plugins.echarts.AsyncTrendChart;
@@ -40,10 +41,10 @@ import io.jenkins.plugins.junit.storage.FileJunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.JunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.TestResultImpl;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import jenkins.model.Jenkins;
@@ -278,21 +279,47 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
     }
 
     /**
-     * Returns list of names belonging to nodes that can be shown.
+     * Returns names belonging to nodes, for displaying.
      */
-    public List<String> getAvailableNodeNames() {
-        List<Node> nodes = Jenkins.get().getNodes();
+    public Collection<String> getNodeNames() {
+        Collection<String> nodeNames = getHistoricNodeNames();
 
-        if (nodes.isEmpty()) {
-            return Collections.singletonList(AGGREGATED_NAME);
-        }
-
-        List<String> nodeNames = new ArrayList<>(2 + nodes.size());
-
-        nodeNames.add(AGGREGATED_NAME);
-        nodeNames.add(MASTER_NODE_NAME);
-        nodeNames.addAll(nodes.stream().map(n -> n.getDisplayName()).collect(Collectors.toList()));
+        correctBuiltInNodeName(nodeNames);
 
         return nodeNames;
+    }
+
+    /**
+     * Returns {@code true} if Jenkins has node with given name,
+     * {@code false} otherwise.
+     */
+    public boolean isNodeExisting(String nodeName) {
+        return Jenkins.get().getNodes().stream().map(Node::getNodeName).anyMatch(n -> n.equals(nodeName));
+    }
+
+    /**
+     * Returns names of all nodes used for builds.
+     * Contains {@code ""} for Built-In Node.
+     */
+    private Collection<String> getHistoricNodeNames() {
+        Set<String> nodeNames = new HashSet<>();
+
+        for (Run<?, ?> build : job.getBuilds()) {
+            TestResultAction action = build.getAction(TestResultAction.class);
+
+            if (action == null) {
+                continue;
+            }
+
+            nodeNames.addAll(action.getSummary().getExecutorNodeNames());
+        }
+
+        return nodeNames;
+    }
+
+    private void correctBuiltInNodeName(Collection<String> nodeNames) {
+        if (nodeNames.remove("")) {
+            nodeNames.add(MASTER_NODE_NAME);
+        }
     }
 }

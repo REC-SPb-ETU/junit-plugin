@@ -149,7 +149,7 @@ public abstract class TestObject extends hudson.tasks.junit.TestObject {
         // } else {
         //    return a complete path starting with "/"
         // }
-        if (it == this) {
+        if (it == this || it == null) {
             return ".";
         }
 
