@@ -82,12 +82,14 @@ THE SOFTWARE.
           </div>
         </c:trend-setup>
 
-        <c:trend-chart
-          it="${from}"
-          title="${nodeName}: ${%Test Result Trend}"
-          enableLinks="true"
-          configurationId="${idx + 1}-junit"
-        />
+        <div id="${nodeName}-trend">
+          <c:trend-chart
+            it="${from}"
+            title="${nodeName}: ${%Test Result Trend}"
+            enableLinks="true"
+            configurationId="${idx + 1}-junit"
+          />
+        </div>
       </div>
     </j:forEach>
   </div>

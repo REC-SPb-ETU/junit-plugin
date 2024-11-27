@@ -149,22 +149,19 @@ public abstract class TestObject extends hudson.tasks.junit.TestObject {
         // } else {
         //    return a complete path starting with "/"
         // }
-        if (it == this || it == null) {
-            return ".";
-        }
 
         StringBuilder buf = new StringBuilder();
         TestObject next = this;
         TestObject cur = this;
         // Walk up my ancestors from leaf to root, looking for "it"
         // and accumulating a relative url as I go
-        while (next != null && !it.getId().equals(next.getId())) {
+        while (next != null && !areEqual(it, next)) {
             cur = next;
             buf.insert(0, '/');
             buf.insert(0, cur.getSafeName());
             next = cur.getParent();
         }
-        if (next != null && it.getId().equals(next.getId())) {
+        if (areEqual(it, next)) {
             return buf.toString();
         } else {
             // Keep adding on to the string we've built so far
@@ -212,6 +209,18 @@ public abstract class TestObject extends hudson.tasks.junit.TestObject {
             LOGGER.log(Level.FINE, "Here is our relative path: {0}", buf);
             return buf.toString();
         }
+    }
+
+    private boolean areEqual(TestObject first, TestObject second) {
+        if (first == second) {
+            return true;
+        }
+
+        if (first != null && second != null) {
+            return first.getId().equals(second.getId());
+        }
+
+        return false;
     }
 
     /**

@@ -65,7 +65,6 @@ import org.kohsuke.stapler.bind.JavaScriptMethod;
 public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncConfigurableTrendChart {
     private static final JacksonFacade JACKSON_FACADE = new JacksonFacade();
     private static final String AGGREGATED_NAME = "Aggregated";
-    private static final String MASTER_NODE_NAME = "Master Node";
 
     /**
      * Project that owns this action.
@@ -260,15 +259,6 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
         if (AGGREGATED_NAME.equals(nodeName) || nodeName == null || nodeName.isBlank()) {
             return null;
         }
-        // show master node
-        if (MASTER_NODE_NAME.equals(nodeName)) {
-            // According to javadoc of hudson.model.Node#getName(),
-            // it returns blank string if called on master node,
-            // but in frontend we can't use blank string as option of datalist
-            // (it will not be displayed) so we use non-empty string and resolve
-            // it here
-            return "";
-        }
 
         return nodeName;
     }
@@ -282,11 +272,7 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
      * Returns names belonging to nodes, for displaying.
      */
     public Collection<String> getNodeNames() {
-        Collection<String> nodeNames = getHistoricNodeNames();
-
-        correctBuiltInNodeName(nodeNames);
-
-        return nodeNames;
+        return getHistoricNodeNames();
     }
 
     /**
@@ -294,12 +280,18 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
      * {@code false} otherwise.
      */
     public boolean isNodeExisting(String nodeName) {
-        return Jenkins.get().getNodes().stream().map(Node::getNodeName).anyMatch(n -> n.equals(nodeName));
+        // built-in node always exists
+        if (PipelineTestDetails.MASTER_NODE_NAME.equals(nodeName)) {
+            return true;
+        }
+
+        return Jenkins.get().getNodes().stream()
+            .map(Node::getNodeName)
+            .anyMatch(n -> n.equals(nodeName));
     }
 
     /**
      * Returns names of all nodes used for builds.
-     * Contains {@code ""} for Built-In Node.
      */
     private Collection<String> getHistoricNodeNames() {
         Set<String> nodeNames = new HashSet<>();
@@ -315,11 +307,5 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
         }
 
         return nodeNames;
-    }
-
-    private void correctBuiltInNodeName(Collection<String> nodeNames) {
-        if (nodeNames.remove("")) {
-            nodeNames.add(MASTER_NODE_NAME);
-        }
     }
 }

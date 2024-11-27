@@ -24,12 +24,19 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:test="/lib/test">
+  
+  <j:set var="nodeName" value="${it.requestedNodeName}" />
+  <j:set var="prev" value="${it.previousResult}" />
+  <j:if test="${it.executorNodeNames.contains(nodeName)}">
+    <j:set var="it" value="${it.getResultByExecutorNodeName(nodeName)}" />
+    <j:set var="prev" value="${prev.getResultByExecutorNodeName(nodeName)}" />
+    <j:set var="isForNode" value="true" />
+  </j:if>
+
   <l:layout title="${it.run} ${it.displayName}">
     <st:include page="sidepanel.jelly" />
     <l:main-panel>
       <h1><st:out value="${it.title}" /></h1>
-
-      <j:set var="prev" value="${it.previousResult}" />
 
       <test:bar />
 

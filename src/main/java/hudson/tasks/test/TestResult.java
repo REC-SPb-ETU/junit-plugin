@@ -23,6 +23,7 @@
  */
 package hudson.tasks.test;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.Job;
 import hudson.model.Result;
 import hudson.model.Run;
@@ -32,6 +33,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.kohsuke.stapler.Stapler;
 
 /**
  * A class that represents a general concept of a test result, without any
@@ -41,6 +43,8 @@ import java.util.logging.Logger;
  * @since 1.343
  */
 public abstract class TestResult extends TestObject {
+    public static final String EXECUTOR_NODE_NAME_KEY = "executorNodeName";
+
     private static final Logger LOGGER = Logger.getLogger(TestResult.class.getName());
 
     /**
@@ -66,6 +70,27 @@ public abstract class TestResult extends TestObject {
      * implement this, unless they are *always* in a tallied state.
      */
     public void tally() {}
+
+    /**
+     * Returns collection of names belonging to nodes which
+     * test was executed on.
+     *
+     * @return list of node names.
+     */
+    public Collection<String> getExecutorNodeNames() {
+        return Collections.emptySet();
+    }
+
+    /**
+     * Returns test result object for tests executed on
+     * node with given name.
+     *
+     * @param executorNodeName given name of node.
+     * @return test result.
+     */
+    public TestResult getResultByExecutorNodeName(@NonNull String executorNodeName) {
+        return null;
+    }
 
     /**
      * Sets the parent test result
@@ -299,5 +324,9 @@ public abstract class TestResult extends TestObject {
             text = action.annotate(text);
         }
         return text;
+    }
+
+    public String getRequestedNodeName() {
+        return Stapler.getCurrentRequest().getParameter(EXECUTOR_NODE_NAME_KEY);
     }
 }

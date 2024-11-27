@@ -70,7 +70,6 @@ import org.kohsuke.stapler.export.Exported;
  * @author Kohsuke Kawaguchi
  */
 public final class TestResult extends MetaTabulatedResult {
-
     private static final Logger LOGGER = Logger.getLogger(JUnitResultArchiver.class.getName());
 
     /**
@@ -1011,12 +1010,8 @@ public final class TestResult extends MetaTabulatedResult {
     }
 
     @NonNull
+    @Override
     public Collection<String> getExecutorNodeNames() {
-        // for compatibility with jobs which used older versions of plugin
-        if (suitesByExecutorNodeName == null) {
-            return Collections.emptySet();
-        }
-
         return Collections.unmodifiableSet(suitesByExecutorNodeName.keySet());
     }
 
@@ -1045,6 +1040,7 @@ public final class TestResult extends MetaTabulatedResult {
     }
 
     @NonNull
+    @Override
     public TestResult getResultByExecutorNodeName(@NonNull String executorNodeName) {
         return getResultByExecutorNodeNames(Collections.singletonList(executorNodeName));
     }
@@ -1150,6 +1146,7 @@ public final class TestResult extends MetaTabulatedResult {
             // freeze for the first time
             suitesByName = new HashMap<>();
             suitesByNode = new HashMap<>();
+            suitesByExecutorNodeName = new HashMap<>();
             testsByBlock = new HashMap<>();
             totalTests = 0;
             failedTests = new ArrayList<>();
@@ -1167,6 +1164,7 @@ public final class TestResult extends MetaTabulatedResult {
                     .collect(Collectors.toList()));
 
             addSuiteByNode(s);
+            addSuiteByExecutorNodeName(s);
 
             totalTests += s.getCases().size();
             for (CaseResult cr : s.getCases()) {
@@ -1231,6 +1229,10 @@ public final class TestResult extends MetaTabulatedResult {
 
     private void addSuiteByExecutorNodeName(SuiteResult s) {
         String nodeName = s.getExecutorNodeName();
+
+        if (nodeName == null) {
+            return;
+        }
 
         if (suitesByExecutorNodeName.get(nodeName) == null) {
             suitesByExecutorNodeName.put(nodeName, new ArrayList<>());

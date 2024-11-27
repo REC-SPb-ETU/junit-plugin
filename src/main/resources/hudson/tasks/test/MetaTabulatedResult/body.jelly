@@ -25,6 +25,7 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:t="/lib/hudson/test">
+  <!-- failed tests -->
   <j:if test="${it.failCount!=0}">
     <h2>${%All Failed Tests}</h2>
     <table class="jenkins-table sortable" id="failedtestresult">
@@ -40,7 +41,12 @@ THE SOFTWARE.
       </thead>
       <j:forEach var="f" items="${it.failedTests}" varStatus="i">
         <tr>
-          <td class="pane no-wrap"><t:failed-test result="${f}" url="${f.getRelativePathFrom(it)}"/></td>
+          <j:if test="${!isForNode}">
+            <td class="pane no-wrap"><t:failed-test result="${f}" url="${f.getRelativePathFrom(it)}"/></td>
+          </j:if>
+          <j:if test="${isForNode}">
+            <td class="pane no-wrap"><a href="${f.getRelativePathFrom(it)}">${f.displayName}</a></td>
+          </j:if>
           <td class="pane no-wrap" style="text-align:right;" data="${f.duration}">
             ${f.durationString}
           </td>
@@ -48,6 +54,34 @@ THE SOFTWARE.
             <a href="${rootURL}/${f.failedSinceRun.url}">${f.age}</a>
           </td>
           <j:forEach var="tablerow" items="${f.testActions}">
+            <st:include it="${tablerow}" page="tablerow.jelly" optional="true"/>
+          </j:forEach>
+        </tr>
+      </j:forEach>
+    </table>
+  </j:if>
+
+  <!-- skipped tests -->
+  <j:if test="${isForNode and it.skipCount!=0}">
+    <h2>${%All Skipped Tests}</h2>
+    <table class="jenkins-table sortable" id="skippedtestresult">
+      <thead>
+        <tr>
+          <th class="pane-header">${%Test Name}</th>
+          <th class="pane-header" style="width:4em">${%Duration}</th>
+          <j:forEach var="tableheader" items="${it.testActions}">
+            <st:include it="${tableheader}" page="casetableheader.jelly" optional="true"/>
+          </j:forEach>
+        </tr>
+      </thead>
+      <j:forEach var="s" items="${it.skippedTests}" varStatus="i">
+        <tr>
+          <td class="pane no-wrap"><a href="${s.getRelativePathFrom(it)}">${s.displayName}</a></td>
+          <td class="pane no-wrap" style="text-align:right;" data="${s.duration}">
+            ${s.durationString}
+          </td>
+
+          <j:forEach var="tablerow" items="${s.testActions}">
             <st:include it="${tablerow}" page="tablerow.jelly" optional="true"/>
           </j:forEach>
         </tr>
@@ -76,12 +110,22 @@ THE SOFTWARE.
         </tr>
       </thead>
       <tbody>
-        <j:set var="prevAll" value="${it.previousResult}" />
+        <j:set var="prevAll" value="${prev}" />
         <j:forEach var="p" items="${it.children}">
           <j:set var="prev" value="${prevAll.findCorrespondingResult(p.id)}" />
           <tr>
             <td class="pane">
-              <a href="${p.safeName}/" class="body.jelly"><span style="${prev==null?'font-weight:bold':''}"><st:out value="${p.displayName}" /></span></a>
+              <j:if test="${!isForNode}">
+                <a href="${p.safeName}/" class="body.jelly">
+                  <span style="${prev==null?'font-weight:bold':''}">
+                    <st:out value="${p.displayName}" />
+                  </span>
+                </a>
+              </j:if>
+              <j:if test="${isForNode}">
+                <span>${p.displayName}</span>
+              </j:if>
+              
               <j:forEach var="badge" items="${p.testActions}">
                 <st:include it="${badge}" page="badge.jelly" optional="true"/>
               </j:forEach>
