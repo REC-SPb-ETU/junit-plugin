@@ -1,8 +1,7 @@
 package hudson.tasks.junit;
 
-import hudson.tasks.test.TestResultTrendSeriesBuilder;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.Serializable;
-import java.util.HashMap;
 import java.util.Map;
 
 public class TrendTestResultSummary implements Serializable {
@@ -16,15 +15,11 @@ public class TrendTestResultSummary implements Serializable {
     }
 
     public Map<String, Integer> toMap() {
-        Map<String, Integer> series = new HashMap<>();
-        int totalCount = testResultSummary.getTotalCount();
-        int failCount = testResultSummary.getFailCount();
-        int skipCount = testResultSummary.getSkipCount();
-        series.put(TestResultTrendSeriesBuilder.TOTALS_KEY, totalCount);
-        series.put(TestResultTrendSeriesBuilder.PASSED_KEY, totalCount - failCount - skipCount);
-        series.put(TestResultTrendSeriesBuilder.FAILED_KEY, failCount);
-        series.put(TestResultTrendSeriesBuilder.SKIPPED_KEY, skipCount);
-        return series;
+        return SummarySeriesConverter.convertToSeries(testResultSummary);
+    }
+
+    public Map<String, Integer> toMap(@NonNull String executorNodeName) {
+        return SummarySeriesConverter.convertToSeries(testResultSummary, executorNodeName);
     }
 
     public int getBuildNumber() {

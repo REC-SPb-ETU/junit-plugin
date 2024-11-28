@@ -31,7 +31,6 @@ THE SOFTWARE.
     <a href="${it.urlName}/">${it.displayName}</a>
     <st:nbsp/>
     <test:test-result/>
-
     <j:set var="failedTests" value="${it.failedTests}" />
     <j:if test="${failedTests != null}">
       <j:set var="failedIterator" value="${failedTests.iterator()}" />
@@ -67,6 +66,21 @@ THE SOFTWARE.
            href="#showFailuresLink">${%Show all failed tests} ${">>>"}</a>
       </j:if>
     </j:if>
+
+    <j:if test="${!it.summary.executorNodeNames.isEmpty()}">
+      <div>
+        ${%Results by nodes}
+      </div>
+    </j:if>
+    <j:forEach var="nodeName" items="${it.summary.executorNodeNames}">
+      <ul style="list-style-type: none; margin: 0;">
+        <li class="${elementClass}" style="${elementStyle}">
+          <a href="${it.urlName}?executorNodeName=${nodeName}">
+            <st:out value="${nodeName}"/>
+          </a>
+        </li>
+      </ul>
+    </j:forEach>
 
   </t:summary>
 </j:jelly>

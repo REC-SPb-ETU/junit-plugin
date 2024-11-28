@@ -10,7 +10,14 @@ import java.util.List;
  * Builder class for recording additional Pipeline-related arguments needed for test parsing and test results.
  */
 public class PipelineTestDetails implements Serializable {
+    /**
+     * When you ask name of built-in node, Jenkins returns
+     * {@code ""} so we use this to keep name of master node.
+     */
+    public static final String MASTER_NODE_NAME = "Master Node";
+
     private String nodeId;
+    private String executorNodeName;
     private List<String> enclosingBlocks = new ArrayList<>();
     private List<String> enclosingBlockNames = new ArrayList<>();
 
@@ -21,6 +28,19 @@ public class PipelineTestDetails implements Serializable {
 
     public void setNodeId(@NonNull String nodeId) {
         this.nodeId = nodeId;
+    }
+
+    @CheckForNull
+    public String getExecutorNodeName() {
+        return executorNodeName;
+    }
+
+    public void setExecutorNodeName(@NonNull String executorNodeName) {
+        if ("".equals(executorNodeName)) {
+            executorNodeName = MASTER_NODE_NAME;
+        }
+
+        this.executorNodeName = executorNodeName;
     }
 
     @NonNull

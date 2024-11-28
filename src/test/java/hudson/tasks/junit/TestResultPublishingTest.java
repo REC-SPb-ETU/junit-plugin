@@ -25,7 +25,6 @@ package hudson.tasks.junit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -144,7 +143,7 @@ public class TestResultPublishingTest {
         //      there should be a test result trend graph
         HtmlElement trendGraphCaption = (HtmlElement)
                 projectPage.getByXPath("//div[@class='test-trend-caption']").get(0);
-        assertThat(trendGraphCaption.getTextContent(), is("Test Result Trend"));
+        assertThat(trendGraphCaption.getTextContent(), containsString("Test Result Trend"));
         HtmlElement testCanvas =
                 (HtmlElement) trendGraphCaption.getNextSibling().getFirstChild();
         assertTrue(

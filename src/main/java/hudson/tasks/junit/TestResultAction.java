@@ -72,13 +72,8 @@ public class TestResultAction extends AbstractTestResultAction<TestResultAction>
         implements StaplerProxy, SimpleBuildStep.LastBuildAction {
     private transient WeakReference<TestResult> result;
 
-    /** null only if there is a {@link JunitTestResultStorage} */
-    private @Nullable Integer failCount;
+    private @Nullable TestResultSummary summary;
 
-    private @Nullable Integer skipCount;
-    // Hudson < 1.25 didn't set these fields, so use Integer
-    // so that we can distinguish between 0 tests vs not-computed-yet.
-    private @Nullable Integer totalCount;
     private Double healthScaleFactor;
     private List<Data> testData = new ArrayList<>();
 
@@ -124,9 +119,7 @@ public class TestResultAction extends AbstractTestResultAction<TestResultAction>
         assert JunitTestResultStorage.find() instanceof FileJunitTestResultStorage;
         result.freeze(this);
 
-        totalCount = result.getTotalCount();
-        failCount = result.getFailCount();
-        skipCount = result.getSkipCount();
+        summary = new TestResultSummary(result);
 
         if (run != null) {
             // persist the data
@@ -173,10 +166,8 @@ public class TestResultAction extends AbstractTestResultAction<TestResultAction>
             r = load();
             result = new WeakReference<>(r);
         }
-        if (totalCount == null) {
-            totalCount = r.getTotalCount();
-            failCount = r.getFailCount();
-            skipCount = r.getSkipCount();
+        if (summary == null) {
+            summary = new TestResultSummary(r);
         }
         long d = System.nanoTime() - started;
         if (d > TimeUnit.MILLISECONDS.toNanos(500)) {
@@ -191,10 +182,10 @@ public class TestResultAction extends AbstractTestResultAction<TestResultAction>
         if (!(storage instanceof FileJunitTestResultStorage)) {
             return new TestResult(storage.load(run.getParent().getFullName(), run.getNumber())).getFailCount();
         }
-        if (totalCount == null) {
+        if (summary == null) {
             getResult(); // this will compute the result
         }
-        return failCount;
+        return summary.getFailCount();
     }
 
     @Override
@@ -203,10 +194,10 @@ public class TestResultAction extends AbstractTestResultAction<TestResultAction>
         if (!(storage instanceof FileJunitTestResultStorage)) {
             return new TestResult(storage.load(run.getParent().getFullName(), run.getNumber())).getSkipCount();
         }
-        if (totalCount == null) {
+        if (summary == null) {
             getResult(); // this will compute the result
         }
-        return skipCount;
+        return summary.getSkipCount();
     }
 
     @Override
@@ -215,10 +206,23 @@ public class TestResultAction extends AbstractTestResultAction<TestResultAction>
         if (!(storage instanceof FileJunitTestResultStorage)) {
             return new TestResult(storage.load(run.getParent().getFullName(), run.getNumber())).getTotalCount();
         }
-        if (totalCount == null) {
+        if (summary == null) {
             getResult(); // this will compute the result
         }
-        return totalCount;
+        return summary.getTotalCount();
+    }
+
+    @Override
+    public synchronized TestResultSummary getSummary() {
+        JunitTestResultStorage storage = JunitTestResultStorage.find();
+        if (!(storage instanceof FileJunitTestResultStorage)) {
+            TestResult result = new TestResult(storage.load(run.getParent().getFullName(), run.getNumber()));
+            return new TestResultSummary(result);
+        }
+        if (summary == null) {
+            getResult(); // this will compute the result
+        }
+        return summary;
     }
 
     @Override

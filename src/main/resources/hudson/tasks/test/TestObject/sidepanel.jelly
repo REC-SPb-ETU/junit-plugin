@@ -37,12 +37,12 @@ THE SOFTWARE.
       <st:include it="${it.run}" page="actions.jelly" optional="true" />
 
       <t:actions actions="${it.testActions}" />
-
+      ${it}
       <j:if test="${it.run.previousBuild!=null}">
-        <l:task href="${buildUrl.previousBuildUrl}" icon="icon-previous icon-md" title="${%Previous Build}"/>
+        <l:task href="${buildUrl.previousBuildUrl}?executorNodeName=${nodeName}" icon="icon-previous icon-md" title="${%Previous Build}"/>
       </j:if>
       <j:if test="${it.run.nextBuild!=null}">
-        <l:task href="${buildUrl.nextBuildUrl}" icon="icon-next icon-md" title="${%Next Build}"/>
+        <l:task href="${buildUrl.nextBuildUrl}?executorNodeName=${nodeName}" icon="icon-next icon-md" title="${%Next Build}"/>
       </j:if>
     </l:tasks>
   </l:side-panel>

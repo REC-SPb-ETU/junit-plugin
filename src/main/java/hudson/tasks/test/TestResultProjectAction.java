@@ -30,8 +30,10 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
 import hudson.model.Job;
+import hudson.model.Node;
 import hudson.model.Run;
 import hudson.tasks.junit.JUnitResultArchiver;
+import hudson.tasks.junit.TestResultAction;
 import hudson.tasks.junit.TrendTestResultSummary;
 import io.jenkins.plugins.echarts.AsyncConfigurableTrendChart;
 import io.jenkins.plugins.echarts.AsyncTrendChart;
@@ -39,9 +41,13 @@ import io.jenkins.plugins.junit.storage.FileJunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.JunitTestResultStorage;
 import io.jenkins.plugins.junit.storage.TestResultImpl;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.Ancestor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -58,6 +64,7 @@ import org.kohsuke.stapler.bind.JavaScriptMethod;
  */
 public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncConfigurableTrendChart {
     private static final JacksonFacade JACKSON_FACADE = new JacksonFacade();
+    private static final String AGGREGATED_NAME = "Aggregated";
 
     /**
      * Project that owns this action.
@@ -119,11 +126,11 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
 
     @Deprecated
     protected LinesChartModel createChartModel() {
-        return createChartModel(new ChartModelConfiguration(), TestResultTrendChart.PassedColor.BLUE);
+        return createChartModel(new ChartModelConfiguration(), TestResultTrendChart.PassedColor.BLUE, null);
     }
 
     private LinesChartModel createChartModel(
-            ChartModelConfiguration configuration, TestResultTrendChart.PassedColor passedColor) {
+            ChartModelConfiguration configuration, TestResultTrendChart.PassedColor passedColor, String nodeName) {
         Run<?, ?> lastCompletedBuild = job.getLastCompletedBuild();
 
         JunitTestResultStorage storage = JunitTestResultStorage.find();
@@ -134,14 +141,15 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
             if (summary.isEmpty()) {
                 return new LinesChartModel();
             }
-            return new TestResultTrendChart().create(summary, passedColor);
+
+            return new TestResultTrendChart().create(summary, passedColor, nodeName);
         }
 
         TestResultActionIterable buildHistory = createBuildHistory(lastCompletedBuild);
         if (buildHistory == null) {
             return new LinesChartModel();
         }
-        return new TestResultTrendChart().create(buildHistory, configuration, passedColor);
+        return new TestResultTrendChart().create(buildHistory, nodeName, configuration, passedColor);
     }
 
     @CheckForNull
@@ -240,11 +248,64 @@ public class TestResultProjectAction implements Action, AsyncTrendChart, AsyncCo
         TestResultTrendChart.PassedColor useBlue = JACKSON_FACADE.getBoolean(configuration, "useBlue", false)
                 ? TestResultTrendChart.PassedColor.BLUE
                 : TestResultTrendChart.PassedColor.GREEN;
-        return new JacksonFacade().toJson(createChartModel(ChartModelConfiguration.fromJson(configuration), useBlue));
+        String nodeName = resolveNodeName(JACKSON_FACADE.getString(configuration, "nodeName", null));
+
+        return new JacksonFacade()
+                .toJson(createChartModel(ChartModelConfiguration.fromJson(configuration), useBlue, nodeName));
+    }
+
+    private String resolveNodeName(String nodeName) {
+        // show all nodes
+        if (AGGREGATED_NAME.equals(nodeName) || nodeName == null || nodeName.isBlank()) {
+            return null;
+        }
+
+        return nodeName;
     }
 
     @Override
     public boolean isTrendVisible() {
         return true;
+    }
+
+    /**
+     * Returns names belonging to nodes, for displaying.
+     */
+    public Collection<String> getNodeNames() {
+        return getHistoricNodeNames();
+    }
+
+    /**
+     * Returns {@code true} if Jenkins has node with given name,
+     * {@code false} otherwise.
+     */
+    public boolean isNodeExisting(String nodeName) {
+        // built-in node always exists
+        if (PipelineTestDetails.MASTER_NODE_NAME.equals(nodeName)) {
+            return true;
+        }
+
+        return Jenkins.get().getNodes().stream()
+            .map(Node::getNodeName)
+            .anyMatch(n -> n.equals(nodeName));
+    }
+
+    /**
+     * Returns names of all nodes used for builds.
+     */
+    private Collection<String> getHistoricNodeNames() {
+        Set<String> nodeNames = new HashSet<>();
+
+        for (Run<?, ?> build : job.getBuilds()) {
+            TestResultAction action = build.getAction(TestResultAction.class);
+
+            if (action == null) {
+                continue;
+            }
+
+            nodeNames.addAll(action.getSummary().getExecutorNodeNames());
+        }
+
+        return nodeNames;
     }
 }

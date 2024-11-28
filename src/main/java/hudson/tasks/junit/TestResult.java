@@ -70,8 +70,12 @@ import org.kohsuke.stapler.export.Exported;
  * @author Kohsuke Kawaguchi
  */
 public final class TestResult extends MetaTabulatedResult {
-
     private static final Logger LOGGER = Logger.getLogger(JUnitResultArchiver.class.getName());
+
+    /**
+     * Used to keep {@link #suites} with {@code null} node ID in {@link #suitesByNode}.
+     */
+    private static final String NULL_NODE_ID_PLACEHOLDER = "Null ID";
 
     @SuppressFBWarnings(
             value = "SE_BAD_FIELD",
@@ -90,9 +94,14 @@ public final class TestResult extends MetaTabulatedResult {
     private transient Map<String, Collection<SuiteResult>> suitesByName;
 
     /**
-     * {@link #suites} keyed by their node ID for faster lookup. May be empty.
+     * {@link #suites} keyed by their node ID for faster lookup. If suite has {@code null} node ID,
+     * it will be in list with {@link #NULL_NODE_ID_PLACEHOLDER} key.
      */
     private transient Map<String, List<SuiteResult>> suitesByNode;
+    /**
+     * {@link #suites} keyed by their executor node name for faster lookup.
+     */
+    private transient Map<String, List<SuiteResult>> suitesByExecutorNodeName;
 
     /**
      * Results tabulated by package.
@@ -1001,6 +1010,12 @@ public final class TestResult extends MetaTabulatedResult {
     }
 
     @NonNull
+    @Override
+    public Collection<String> getExecutorNodeNames() {
+        return Collections.unmodifiableSet(suitesByExecutorNodeName.keySet());
+    }
+
+    @NonNull
     public TestResult getResultByNode(@NonNull String nodeId) {
         return getResultByNodes(Collections.singletonList(nodeId));
     }
@@ -1013,6 +1028,30 @@ public final class TestResult extends MetaTabulatedResult {
         TestResult result = new TestResult();
         for (String n : nodeIds) {
             List<SuiteResult> suites = suitesByNode.get(n);
+            if (suites != null) {
+                for (SuiteResult s : suites) {
+                    result.add(s);
+                }
+            }
+        }
+        result.setParentAction(parentAction);
+
+        return result;
+    }
+
+    @NonNull
+    @Override
+    public TestResult getResultByExecutorNodeName(@NonNull String executorNodeName) {
+        return getResultByExecutorNodeNames(Collections.singletonList(executorNodeName));
+    }
+
+    public TestResult getResultByExecutorNodeNames(@NonNull List<String> executorNodeNames) {
+        if (impl != null) {
+            return impl.getResultByExecutorNodeNames(executorNodeNames);
+        }
+        TestResult result = new TestResult();
+        for (String n : executorNodeNames) {
+            List<SuiteResult> suites = suitesByExecutorNodeName.get(n);
             if (suites != null) {
                 for (SuiteResult s : suites) {
                     result.add(s);
@@ -1045,6 +1084,7 @@ public final class TestResult extends MetaTabulatedResult {
         // TODO: free children? memmory leak?
         suitesByName = new HashMap<>();
         suitesByNode = new HashMap<>();
+        suitesByExecutorNodeName = new HashMap<>();
         testsByBlock = new HashMap<>();
         failedTests = new ArrayList<>();
         skippedTests = null;
@@ -1059,9 +1099,8 @@ public final class TestResult extends MetaTabulatedResult {
             s.setParent(this); // kluge to prevent double-counting the results
             suitesByName.merge(s.getName(), Collections.singleton(s), (a, b) -> Stream.concat(a.stream(), b.stream())
                     .collect(Collectors.toList()));
-            if (s.getNodeId() != null) {
-                addSuiteByNode(s);
-            }
+            addSuiteByNode(s);
+            addSuiteByExecutorNodeName(s);
 
             List<CaseResult> cases = s.getCases();
 
@@ -1107,6 +1146,7 @@ public final class TestResult extends MetaTabulatedResult {
             // freeze for the first time
             suitesByName = new HashMap<>();
             suitesByNode = new HashMap<>();
+            suitesByExecutorNodeName = new HashMap<>();
             testsByBlock = new HashMap<>();
             totalTests = 0;
             failedTests = new ArrayList<>();
@@ -1123,9 +1163,8 @@ public final class TestResult extends MetaTabulatedResult {
             suitesByName.merge(s.getName(), Collections.singleton(s), (a, b) -> Stream.concat(a.stream(), b.stream())
                     .collect(Collectors.toList()));
 
-            if (s.getNodeId() != null) {
-                addSuiteByNode(s);
-            }
+            addSuiteByNode(s);
+            addSuiteByExecutorNodeName(s);
 
             totalTests += s.getCases().size();
             for (CaseResult cr : s.getCases()) {
@@ -1173,21 +1212,33 @@ public final class TestResult extends MetaTabulatedResult {
     }
 
     private void addSuiteByNode(SuiteResult s) {
-        String nodeId = s.getNodeId();
+        String nodeId = s.getNodeId() == null ? NULL_NODE_ID_PLACEHOLDER : s.getNodeId();
 
-        if (nodeId != null) {
-            // If we don't already have an entry for this node, initialize a list for it.
-            if (suitesByNode.get(nodeId) == null) {
-                suitesByNode.put(nodeId, new ArrayList<>());
-            }
-            // Add the suite to the list for the node in the map. Phew.
-            suitesByNode.get(nodeId).add(s);
-
-            List<String> enclosingBlocks = new ArrayList<>(s.getEnclosingBlocks());
-            if (!enclosingBlocks.isEmpty()) {
-                populateBlocks(enclosingBlocks, nodeId, null);
-            }
+        // If we don't already have an entry for this node, initialize a list for it.
+        if (suitesByNode.get(nodeId) == null) {
+            suitesByNode.put(nodeId, new ArrayList<>());
         }
+        // Add the suite to the list for the node in the map. Phew.
+        suitesByNode.get(nodeId).add(s);
+
+        List<String> enclosingBlocks = new ArrayList<>(s.getEnclosingBlocks());
+        if (!enclosingBlocks.isEmpty()) {
+            populateBlocks(enclosingBlocks, nodeId, null);
+        }
+    }
+
+    private void addSuiteByExecutorNodeName(SuiteResult s) {
+        String nodeName = s.getExecutorNodeName();
+
+        if (nodeName == null) {
+            return;
+        }
+
+        if (suitesByExecutorNodeName.get(nodeName) == null) {
+            suitesByExecutorNodeName.put(nodeName, new ArrayList<>());
+        }
+
+        suitesByExecutorNodeName.get(nodeName).add(s);
     }
 
     @NonNull

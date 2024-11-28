@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 The MIT License
 
@@ -24,23 +25,76 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:c="/charts" xmlns:st="jelly:stapler">
-  <c:trend-setup suffix="junit">
-    <div class="mb-3">
-      <input class="form-check-input" type="checkbox" value="" id="junit-use-blue" />
-      <label class="form-check-label" for="junit-use-blue">
-        Show passed tests in blue (rather than in green)
-      </label>
+  <div class="row my-2">
+    <div class="col-6">
+      <input class="form-check-input" type="checkbox" id="enable-separate-trends"/>
+      <label class="form-check-label" for="enable-separate-trends">
+          Show one trend per node
+        </label>
     </div>
-    <div class="mb-3">
-      <label class="form-label fw-bold">
-        General configuration
-      </label>
+    <div class="col-6">
+      <input class="form-check-input" type="checkbox" id="show-dead-nodes"/>
+        <label class="form-check-label" for="show-dead-nodes">
+          Show non-existing nodes
+        </label>
     </div>
-  </c:trend-setup>
+  </div>
 
-  <c:trend-chart it="${from}" title="${%Test Result Trend}" enableLinks="true" configurationId="junit"/>
+  <!-- Aggregated -->
+  <div id="aggregated-chart">
+    <c:trend-setup suffix="0-junit">
+      <div class="mb-3">
+        <input class="form-check-input" type="checkbox" value="" id="0-junit-use-blue"/>
+        <label class="form-check-label" for="0-junit-use-blue">
+          Show passed tests in blue (rather than in green)
+        </label>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">
+          General configuration
+        </label>
+      </div>
+    </c:trend-setup>
+    <c:trend-chart
+      it="${from}"
+      title="${%Test Result Trend}"
+      enableLinks="true"
+      configurationId="0-junit"
+    />
+  </div>
 
+  <!-- Nodewise -->
+  <div id="separate-charts">
+    <j:forEach indexVar="idx" var="nodeName" items="${from.nodeNames}">
+      <div existing-node="${from.isNodeExisting(nodeName)}">
+        <c:trend-setup suffix="${idx + 1}-junit">
+          <div class="mb-3">
+            <input class="form-check-input" type="checkbox" value="" id="${idx + 1}-junit-use-blue"/>
+            <label class="form-check-label" for="${idx + 1}-junit-use-blue">
+              Show passed tests in blue (rather than in green)
+            </label>
+          </div>
+          <input type="hidden" id="${idx + 1}-junit-node-name" value="${nodeName}"/>
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              General configuration
+            </label>
+          </div>
+        </c:trend-setup>
 
-  <st:adjunct includes="hudson.tasks.test.TestResultProjectAction.junit-trend-color-switcher" />
+        <div id="${nodeName}-trend">
+          <c:trend-chart
+            it="${from}"
+            title="${nodeName}: ${%Test Result Trend}"
+            enableLinks="true"
+            configurationId="${idx + 1}-junit"
+          />
+        </div>
+      </div>
+    </j:forEach>
+  </div>
+
+  <st:adjunct includes="hudson.tasks.test.TestResultProjectAction.junit-trend-config" />
+  <st:adjunct includes="hudson.tasks.test.TestResultProjectAction.checkboxes" />
 
 </j:jelly>

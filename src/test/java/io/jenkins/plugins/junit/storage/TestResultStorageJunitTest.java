@@ -921,6 +921,12 @@ public class TestResultStorageJunitTest {
                 public TestResult getResultByNodes(@NonNull List<String> nodeIds) {
                     return new TestResult(this); // TODO
                 }
+
+                @NonNull
+                @Override
+                public TestResult getResultByExecutorNodeNames(@NonNull List<String> executorNodeNames) {
+                    return new TestResult(this); // TODO
+                }
             };
         }
 

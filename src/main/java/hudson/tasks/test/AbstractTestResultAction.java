@@ -36,6 +36,7 @@ import hudson.model.HealthReportingAction;
 import hudson.model.Project;
 import hudson.model.ResultTrend;
 import hudson.model.Run;
+import hudson.tasks.junit.TestResultSummary;
 import hudson.util.Area;
 import hudson.util.ChartUtil;
 import hudson.util.ColorPalette;
@@ -151,6 +152,13 @@ public abstract class AbstractTestResultAction<T extends AbstractTestResultActio
      */
     @Exported(visibility = 2)
     public abstract int getTotalCount();
+
+    /**
+     * Gets summary of test result.
+     */
+    public TestResultSummary getSummary() {
+        return null;
+    }
 
     /**
      * Gets the diff string of failures.
